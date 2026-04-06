@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TabShare — WatchParty</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#080b10;--surface:#0e1318;--surface2:#141b23;--border:#1e2c3a;
+    --accent:#00e5ff;--accent2:#ff3e6c;--text:#e8f0f7;--muted:#4a6070;
+    --green:#00ff88;--yellow:#ffcc00;
+    --glow:0 0 20px rgba(0,229,255,0.25);--glow2:0 0 20px rgba(255,62,108,0.25);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;}
+  body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .page{position:relative;z-index:1;}
+  #landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 20px;text-align:center;}
+  .logo{font-family:'Syne',sans-serif;font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;letter-spacing:-.02em;}
+  .logo span{color:var(--accent);}
+  .logo-sub{font-size:.8rem;color:var(--muted);letter-spacing:.25em;text-transform:uppercase;margin-top:8px;}
+  .tagline{margin:28px 0 48px;font-size:1rem;color:var(--muted);max-width:360px;line-height:1.7;}
+  .cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;width:100%;max-width:680px;}
+  .card{flex:1;min-width:260px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px 28px;transition:.2s;}
+  .card:hover{border-color:var(--accent);box-shadow:var(--glow);}
+  .card h2{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:8px;}
+  .card p{font-size:.78rem;color:var(--muted);margin-bottom:24px;line-height:1.6;}
+  .input-row{display:flex;flex-direction:column;gap:10px;}
+  input,button{font-family:'DM Mono',monospace;font-size:.85rem;}
+  input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;outline:none;transition:.2s;width:100%;}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,229,255,.1);}
+  input::placeholder{color:var(--muted);}
+  .btn{padding:11px 20px;border-radius:8px;border:none;cursor:pointer;font-weight:500;transition:.15s;width:100%;letter-spacing:.05em;}
+  .btn-primary{background:var(--accent);color:#000;}
+  .btn-primary:hover{background:#33ecff;box-shadow:var(--glow);}
+  .btn-secondary{background:transparent;border:1px solid var(--accent2);color:var(--accent2);}
+  .btn-secondary:hover{background:rgba(255,62,108,.1);}
+  .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+  .or-sep{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.75rem;}
+  .or-sep::before,.or-sep::after{content:'';flex:1;height:1px;background:var(--border);}
+  #room{display:none;height:100vh;flex-direction:column;}
+  .topbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+  .logo-sm{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;}
+  .logo-sm span{color:var(--accent);}
+  .room-id{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:.75rem;color:var(--muted);cursor:pointer;transition:.15s;}
+  .room-id:hover{border-color:var(--accent);color:var(--accent);}
+  .badge{padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:500;}
+  .badge-admin{background:rgba(255,204,0,.15);color:var(--yellow);border:1px solid rgba(255,204,0,.3);}
+  .badge-viewer{background:rgba(0,229,255,.08);color:var(--accent);border:1px solid rgba(0,229,255,.2);}
+  .topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+  .nick-tag{font-size:.78rem;color:var(--muted);}
+  .nick-tag strong{color:var(--text);}
+  .btn-sm{padding:6px 12px;border-radius:6px;font-size:.73rem;border:none;cursor:pointer;font-family:'DM Mono',monospace;transition:.15s;}
+  .btn-sm.danger{background:rgba(255,62,108,.15);color:var(--accent2);border:1px solid rgba(255,62,108,.3);}
+  .main{display:flex;flex:1;overflow:hidden;}
+  .stream-area{flex:1;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;}
+  .stream-box{flex:1;display:flex;align-items:center;justify-content:center;position:relative;}
+  #streamVideo{width:100%;height:100%;object-fit:contain;display:none;}
+  .stream-placeholder{display:flex;flex-direction:column;align-items:center;gap:16px;color:var(--muted);text-align:center;padding:40px;}
+  .stream-placeholder svg{opacity:.3;}
+  .stream-placeholder p{font-size:.85rem;max-width:280px;line-height:1.7;}
+  .stream-controls{padding:10px 16px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--border);flex-shrink:0;}
+  .btn-share{background:var(--accent2);color:#fff;border:none;padding:9px 20px;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.8rem;display:flex;align-items:center;gap:8px;transition:.15s;}
+  .btn-share:hover{background:#ff5c82;}
+  .btn-share.active{background:var(--surface2);color:var(--accent2);border:1px solid var(--accent2);}
+  .viewer-count{margin-left:auto;font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:6px;}
+  .dot-live{width:7px;height:7px;border-radius:50%;background:var(--accent2);animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+  .chat-panel{width:290px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--surface);}
+  .chat-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+  .chat-header h3{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;}
+  .online-count{margin-left:auto;font-size:.7rem;color:var(--green);background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);padding:2px 8px;border-radius:10px;}
+  .messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;}
+  .messages::-webkit-scrollbar{width:3px;}
+  .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .msg{padding:7px 10px;border-radius:8px;font-size:.77rem;line-height:1.5;}
+  .msg-system{background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.1);color:var(--muted);text-align:center;font-size:.7rem;}
+  .msg-user{background:var(--surface2);}
+  .msg-admin{background:rgba(255,204,0,.06);border-left:2px solid var(--yellow);}
+  .msg .nick{font-weight:500;font-size:.7rem;margin-bottom:2px;}
+  .nick-admin{color:var(--yellow);}
+  .nick-self{color:var(--accent);}
+  .nick-other{color:var(--muted);}
+  .msg .time{float:right;font-size:.63rem;color:var(--muted);}
+  .chat-input-row{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;}
+  .chat-input-row input{flex:1;background:var(--bg);}
+  .btn-send{background:var(--accent);color:#000;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;transition:.15s;}
+  .users-panel{width:170px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;}
+  .users-header{padding:12px 14px;border-bottom:1px solid var(--border);}
+  .users-header h3{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--muted);}
+  .users-list{flex:1;overflow-y:auto;padding:6px;}
+  .user-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:.75rem;}
+  .udot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .udot-admin{background:var(--yellow);}
+  .udot-user{background:var(--green);}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;max-width:380px;width:100%;}
+  .modal h2{font-family:'Syne',sans-serif;font-weight:700;font-size:1.15rem;margin-bottom:6px;}
+  .modal p{font-size:.8rem;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:#000;padding:9px 20px;border-radius:8px;font-size:.8rem;font-weight:500;z-index:9998;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;}
+  .btn-toggle-chat{display:none;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:.73rem;font-family:'DM Mono',monospace;}
+  @media(max-width:700px){.users-panel{display:none;}.chat-panel{width:240px;}}
+  @media(max-width:520px){
+    .chat-panel{width:100%;position:absolute;right:0;top:52px;bottom:0;transform:translateX(100%);transition:.3s;z-index:50;}
+    .chat-panel.open{transform:translateX(0);}
+    .btn-toggle-chat{display:block!important;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div id="landing">
+  <div class="logo">Tab<span>Share</span></div>
+  <div class="logo-sub">WatchParty Platform</div>
+  <p class="tagline">Odanı oluştur, ekranını paylaş — herkes seyreder, sadece sen yönetirsin.</p>
+  <div class="cards">
+    <div class="card">
+      <h2>🎬 Oda Oluştur</h2>
+      <p>Admin olarak oda kur ve sekmeni paylaş.</p>
+      <div class="input-row">
+        <input id="createNick" placeholder="Nickini gir (opsiyonel)" maxlength="20"/>
+        <button class="btn btn-secondary" onclick="createRoom()">Oda Oluştur →</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🎟️ Odaya Katıl</h2>
+      <p>Oda kodunu girerek izleyici olarak katıl.</p>
+      <div class="input-row">
+        <input id="joinCode" placeholder="Oda kodu" maxlength="8" style="text-transform:uppercase"/>
+        <div class="or-sep">ya da</div>
+        <input id="joinNick" placeholder="Nickini gir (opsiyonel)" maxlength="20"/>
+        <button class="btn btn-primary" onclick="joinRoom()">Odaya Katıl →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="room">
+  <div class="topbar">
+    <div class="logo-sm">Tab<span>Share</span></div>
+    <div class="room-id" id="roomIdBadge" onclick="copyRoomId()">📋 ----</div>
+    <span class="badge" id="roleBadge">—</span>
+    <button class="btn-toggle-chat" onclick="toggleChat()">💬</button>
+    <div class="topbar-right">
+      <span class="nick-tag">👤 <strong id="myNickDisplay">—</strong></span>
+      <button class="btn-sm danger" onclick="leaveRoom()">Çık</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="stream-area">
+      <div class="stream-box">
+        <div class="stream-placeholder" id="streamPlaceholder">
+          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <p id="placeholderText">Yayın bekleniyor...<br/>Admin ekran paylaşımını başlatsın.</p>
+        </div>
+        <video id="streamVideo" autoplay playsinline></video>
+      </div>
+      <div class="stream-controls">
+        <button class="btn-share" id="shareBtn" onclick="toggleShare()" style="display:none;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          Sekmeyi Paylaş
+        </button>
+        <div class="viewer-count">
+          <span class="dot-live" id="liveDot" style="display:none;"></span>
+          <span id="viewerText">0 izleyici</span>
+        </div>
+      </div>
+    </div>
+    <div class="users-panel">
+      <div class="users-header"><h3>Kullanıcılar</h3></div>
+      <div class="users-list" id="usersList"></div>
+    </div>
+    <div class="chat-panel" id="chatPanel">
+      <div class="chat-header">
+        <h3>💬 Chat</h3>
+        <span class="online-count" id="onlineCount">0 online</span>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="chat-input-row">
+        <input id="chatInput" placeholder="Mesaj yaz..." maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"/>
+        <button class="btn-send" onclick="sendChat()">→</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="nickModal" style="display:none;">
+  <div class="modal">
+    <h2>👤 Nick Seç</h2>
+    <p>Odaya girerken görünecek ismin. Boş bırakırsan rastgele atanır.</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <input id="modalNick" placeholder="Nickini gir (opsiyonel)" maxlength="20" onkeydown="if(event.key==='Enter')confirmNick()"/>
+      <button class="btn btn-primary" onclick="confirmNick()">Odaya Gir →</button>
+      <button class="btn btn-ghost" onclick="confirmNick(true)">🎲 Rastgele Nick</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, push, onValue, onChildAdded, onDisconnect, serverTimestamp, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA7Lf2S0st56MY3FTtexcSblBPPvOKRxO4",
+  authDomain: "watchparty-b6de2.firebaseapp.com",
+  projectId: "watchparty-b6de2",
+  databaseURL: "https://watchparty-b6de2-default-rtdb.firebaseio.com",
+  storageBucket: "watchparty-b6de2.firebasestorage.app",
+  messagingSenderId: "894985989394",
+  appId: "1:894985989394:web:63aa0863736295dbf397cb"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const ADJS = ['Gizli','Hızlı','Parlak','Sessiz','Deli','Asil','Mavi','Güçlü','Sakin','Cesur'];
+const NOUNS = ['Panda','Kaplan','Kartal','Kurt','Aslan','Baykuş','Tilki','Balık','Köpek','Ayı'];
+const rnd = a => a[Math.floor(Math.random()*a.length)];
+const randomNick = () => `${rnd(ADJS)}${rnd(NOUNS)}${Math.floor(Math.random()*99)+1}`;
+const randomCode = () => Math.random().toString(36).substr(2,6).toUpperCase();
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+let S = { roomId:null,myId:null,myNick:null,isAdmin:false,pendingRoomId:null,isSharing:false,localStream:null,pcs:{} };
+
+// ── CREATE ──
+window.createRoom = () => {
+  const nick = document.getElementById('createNick').value.trim() || randomNick();
+  S.isAdmin = true;
+  enterRoom(randomCode(), nick, true);
+};
+
+// ── JOIN ──
+window.joinRoom = async () => {
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  const nick = document.getElementById('joinNick').value.trim();
+  if (!code) { toast('Oda kodu gerekli!'); return; }
+  const snap = await get(ref(db, `rooms/${code}/meta`));
+  if (!snap.exists()) { toast('Oda bulunamadı! Kodu kontrol et.'); return; }
+  S.pendingRoomId = code; S.isAdmin = false;
+  if (nick) enterRoom(code, nick, false);
+  else document.getElementById('nickModal').style.display = 'flex';
+};
+
+window.confirmNick = (rando=false) => {
+  const nick = rando ? randomNick() : (document.getElementById('modalNick').value.trim() || randomNick());
+  document.getElementById('nickModal').style.display = 'none';
+  enterRoom(S.pendingRoomId, nick, false);
+};
+
+// ── ENTER ROOM ──
+async function enterRoom(roomId, nick, isAdmin) {
+  S.roomId = roomId; S.myNick = nick; S.isAdmin = isAdmin;
+  S.myId = 'u_' + Math.random().toString(36).substr(2,9);
+
+  if (isAdmin) await set(ref(db,`rooms/${roomId}/meta`),{adminId:S.myId,created:serverTimestamp()});
+
+  const uRef = ref(db,`rooms/${roomId}/users/${S.myId}`);
+  await set(uRef,{nick,isAdmin,ts:serverTimestamp()});
+  onDisconnect(uRef).remove();
+
+  // UI switch
+  document.getElementById('landing').style.display='none';
+  document.getElementById('room').style.display='flex';
+  document.getElementById('roomIdBadge').textContent='📋 '+roomId;
+  document.getElementById('myNickDisplay').textContent=nick;
+  document.getElementById('roleBadge').textContent=isAdmin?'👑 Admin':'👁 İzleyici';
+  document.getElementById('roleBadge').className='badge '+(isAdmin?'badge-admin':'badge-viewer');
+  if(isAdmin){
+    document.getElementById('shareBtn').style.display='flex';
+    document.getElementById('placeholderText').innerHTML='📺 Ekran paylaşımı başlatmak için<br/><strong>Sekmeyi Paylaş</strong> butonuna tıkla.';
+  }
+
+  sysMsg(isAdmin ? `Oda oluşturuldu: ${roomId} — Kodu arkadaşlarına gönder!` : `${nick} odaya katıldı.`);
+
+  watchUsers();
+  watchChat();
+  watchSignals();
+}
+
+// ── USERS ──
+function watchUsers() {
+  onValue(ref(db,`rooms/${S.roomId}/users`), snap => {
+    const users = snap.val()||{};
+    const arr = Object.values(users).sort((a,b)=>b.isAdmin-a.isAdmin);
+    const ul = document.getElementById('usersList');
+    ul.innerHTML='';
+    arr.forEach(u=>{
+      const d=document.createElement('div');
+      d.className='user-item';
+      d.innerHTML=`<div class="udot ${u.isAdmin?'udot-admin':'udot-user'}"></div><span>${esc(u.nick)}${u.isAdmin?' 👑':''}</span>`;
+      ul.appendChild(d);
+    });
+    document.getElementById('onlineCount').textContent=arr.length+' online';
+    document.getElementById('viewerText').textContent=arr.length+' izleyici';
+  });
+}
+
+// ── CHAT ──
+function watchChat() {
+  let firstLoad=true, keys=new Set();
+  onValue(ref(db,`rooms/${S.roomId}/chat`), snap=>{
+    if(!snap.exists()){firstLoad=false;return;}
+    const all=snap.val();
+    Object.entries(all).forEach(([k,m])=>{
+      if(keys.has(k))return;
+      keys.add(k);
+      if(firstLoad&&Object.keys(all).indexOf(k)<Object.keys(all).length-20)return;
+      if(m._from===S.myId)return;
+      if(m.type==='system') sysMsg(m.text);
+      else chatMsg(m.nick,m.text,m.isAdmin,false);
+    });
+    firstLoad=false;
+  });
+}
+
+window.sendChat=()=>{
+  const inp=document.getElementById('chatInput');
+  const text=inp.value.trim(); if(!text)return;
+  inp.value='';
+  chatMsg(S.myNick,text,S.isAdmin,true);
+  push(ref(db,`rooms/${S.roomId}/chat`),{type:'chat',nick:S.myNick,text,isAdmin:S.isAdmin,_from:S.myId,ts:serverTimestamp()});
+};
+
+function chatMsg(nick,text,isAdmin,isSelf){
+  const msgs=document.getElementById('messages');
+  const d=document.createElement('div');
+  d.className='msg '+(isAdmin?'msg-admin':'msg-user');
+  const nc=isAdmin?'nick-admin':isSelf?'nick-self':'nick-other';
+  const t=new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+  d.innerHTML=`<div class="nick ${nc}">${esc(nick)}${isAdmin?' 👑':''}</div><span class="time">${t}</span>${esc(text)}`;
+  msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
+}
+
+function sysMsg(text){
+  const msgs=document.getElementById('messages');
+  const d=document.createElement('div');
+  d.className='msg msg-system'; d.textContent=text;
+  msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
+}
+
+// ── SIGNALING ──
+function watchSignals(){
+  onChildAdded(ref(db,`rooms/${S.roomId}/signals/${S.myId}`), snap=>{
+    const sig=snap.val();
+    remove(snap.ref);
+    handleSig(sig);
+  });
+}
+
+async function sig(toId,data){
+  await push(ref(db,`rooms/${S.roomId}/signals/${toId}`),{...data,from:S.myId});
+}
+
+async function handleSig(s){
+  if(s.type==='offer') await doAnswer(s);
+  else if(s.type==='answer'){const pc=S.pcs[s.from];if(pc)await pc.setRemoteDescription(new RTCSessionDescription(s.sdp));}
+  else if(s.type==='ice'){const pc=S.pcs[s.from];if(pc&&s.candidate)try{await pc.addIceCandidate(new RTCIceCandidate(s.candidate));}catch(e){}}
+  else if(s.type==='stream_off') showIdle('Admin yayını durdurdu.');
+  else if(s.type==='want_offer'&&S.isAdmin&&S.isSharing) doOffer(s.from);
+}
+
+// ── WEBRTC ──
+function mkPc(peerId){
+  if(S.pcs[peerId]) S.pcs[peerId].close();
+  const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]});
+  S.pcs[peerId]=pc;
+  pc.onicecandidate=e=>{if(e.candidate)sig(peerId,{type:'ice',candidate:e.candidate});};
+  return pc;
+}
+
+async function doOffer(targetId){
+  if(!S.localStream)return;
+  const pc=mkPc(targetId);
+  S.localStream.getTracks().forEach(t=>pc.addTrack(t,S.localStream));
+  const offer=await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  sig(targetId,{type:'offer',sdp:pc.localDescription});
+}
+
+async function doAnswer(s){
+  const pc=mkPc(s.from);
+  pc.ontrack=e=>{
+    const v=document.getElementById('streamVideo');
+    if(v.srcObject!==e.streams[0]){
+      v.srcObject=e.streams[0];v.style.display='block';
+      document.getElementById('streamPlaceholder').style.display='none';
+    }
+  };
+  await pc.setRemoteDescription(new RTCSessionDescription(s.sdp));
+  const ans=await pc.createAnswer();
+  await pc.setLocalDescription(ans);
+  sig(s.from,{type:'answer',sdp:pc.localDescription});
+}
+
+// ── SHARE TOGGLE ──
+window.toggleShare=async()=>{
+  if(!S.isSharing){
+    try{
+      const stream=await navigator.mediaDevices.getDisplayMedia({video:{cursor:'always',frameRate:30},audio:false});
+      S.localStream=stream; S.isSharing=true;
+      const v=document.getElementById('streamVideo');
+      v.srcObject=stream; v.style.display='block';
+      document.getElementById('streamPlaceholder').style.display='none';
+      document.getElementById('shareBtn').innerHTML=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Paylaşımı Durdur`;
+      document.getElementById('shareBtn').classList.add('active');
+      document.getElementById('liveDot').style.display='inline-block';
+      // offer all current users
+      const snap=await get(ref(db,`rooms/${S.roomId}/users`));
+      if(snap.exists()) Object.keys(snap.val()).forEach(uid=>{if(uid!==S.myId)doOffer(uid);});
+      stream.getVideoTracks()[0].onended=()=>stopShare();
+    }catch(e){if(e.name!=='NotAllowedError')toast('Ekran paylaşımı başlatılamadı.');}
+  }else stopShare();
+};
+
+function stopShare(){
+  if(S.localStream){S.localStream.getTracks().forEach(t=>t.stop());S.localStream=null;}
+  S.isSharing=false;
+  Object.values(S.pcs).forEach(pc=>pc.close()); S.pcs={};
+  showIdle('📺 Ekran paylaşımı başlatmak için Sekmeyi Paylaş butonuna tıkla.');
+  document.getElementById('shareBtn').innerHTML=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> Sekmeyi Paylaş`;
+  document.getElementById('shareBtn').classList.remove('active');
+  document.getElementById('liveDot').style.display='none';
+  get(ref(db,`rooms/${S.roomId}/users`)).then(snap=>{
+    if(snap.exists()) Object.keys(snap.val()).forEach(uid=>{if(uid!==S.myId)sig(uid,{type:'stream_off'});});
+  });
+}
+
+function showIdle(text){
+  const v=document.getElementById('streamVideo');
+  v.srcObject=null; v.style.display='none';
+  document.getElementById('streamPlaceholder').style.display='flex';
+  document.getElementById('placeholderText').textContent=text;
+}
+
+// ── LEAVE ──
+window.leaveRoom=async()=>{
+  if(S.localStream)S.localStream.getTracks().forEach(t=>t.stop());
+  Object.values(S.pcs).forEach(pc=>pc.close());
+  if(S.roomId&&S.myId) await remove(ref(db,`rooms/${S.roomId}/users/${S.myId}`));
+  location.reload();
+};
+
+window.copyRoomId=()=>{
+  navigator.clipboard.writeText(S.roomId).then(()=>toast('Oda kodu kopyalandı: '+S.roomId));
+};
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+window.toggleChat=()=>document.getElementById('chatPanel').classList.toggle('open');
+
+window.addEventListener('beforeunload',()=>{
+  if(S.roomId&&S.myId) remove(ref(db,`rooms/${S.roomId}/users/${S.myId}`));
+});
+</script>
+</body>
+</html>
